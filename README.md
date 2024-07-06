@@ -2,7 +2,7 @@
 ## A comprehensive hospital management system built using Python and Tkinter.
 
 # Features
-### Patient admission and management
+Patient admission and management
 ### Bed occupancy status and management
 ### Patient data management and search
 ### Billing and payment management
