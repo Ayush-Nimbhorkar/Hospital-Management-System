@@ -466,7 +466,7 @@ tk.Label(bed_status_frame, text="Bed Occupancy Status", font="arial 15 bold", bg
 
 room_types = ['Single', 'Twin Sharing', 'Dormitory', 'ICU']
 colors = ['lightgreen', 'lightgrey']  # Lightgreen for available bed, pink for ocuppied bed
-image_path1 = r"C:\Users\HP\OneDrive\Desktop\Python\pngwing.com.png" 
+image_path1 = r"C:\Users\HP\OneDrive\Desktop\Python\bed.png" 
 image1 = Image.open(image_path1)
 image1 = image1.resize((50, 50))
 photo = ImageTk.PhotoImage(image1)
