@@ -9,7 +9,7 @@ def show_frame(frame):
     frame.tkraise()
 
 # Initializing database and creating tables if they don't exist
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Database~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~~~~~~~~~~~Database~~~~~~~~~~~
 def initialize_db():
     try:
         with sqlite3.connect("Hospital.db") as conn:
@@ -47,7 +47,7 @@ def initialize_db():
     conn.commit()
     conn.close()
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~CLEARING ENTRIES~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~~~~~~~~~~~CLEARING ENTRIES~~~~~~~~~~~
 def clear_entries():
     for entry in [patient_id_entry, name_entry, age_entry, address_entry, phone_entry, disease_entry, date_entry, dob_entry, no_of_doctor_visits_entry]:
         entry.delete(0, tk.END)
@@ -57,7 +57,7 @@ def clear_entries():
     billing_patient_name_entry.delete(0, tk.END)
     gender_var.set("none")
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~CHECK IN~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~~~~~~~~~~~CHECK IN~~~~~~~~~~~
 def check_in_patient():
     pid = patient_id_entry.get()
     name = name_entry.get()
@@ -85,7 +85,7 @@ def check_in_patient():
         messagebox.showerror("Error", "Age should be a positive number.")
         return
     # Validate Gender:
-    if gender not in ['Male', 'Female', 'Other']:
+    if gender not in ['Male', 'Female', 'Others']:
         messagebox.showerror("Error", "Invalid gender selection.")
         return
     # Validate Address:
@@ -110,16 +110,16 @@ def check_in_patient():
         messagebox.showerror("Error", "Number of doctor visits should be a non-negative number.")
         return
     # Validate Disease:
-    if not disease.strip():
+    if not (disease.strip() and re.match(r'^[a-zA-Z0-9]+$', pid)):
         messagebox.showerror("Error", "Disease information is required.")
         return
     # Validate Check-in Date (assuming DD-MM-YYYY format):
     if not re.match(r'^\d{2}-\d{2}-\d{4}$', check_date):
-        messagebox.showerror("Error", "Invalid check-in date format. Use YYYY-MM-DD.")
+        messagebox.showerror("Error", "Invalid check-in date format. Use DD-MM-YYYY.")
         return
     # Validate Date of Birth (assuming DD-MM-YYYY format):
     if not re.match(r'^\d{2}-\d{2}-\d{4}$', dob):
-        messagebox.showerror("Error", "Invalid date of birth format. Use YYYY-MM-DD.")
+        messagebox.showerror("Error", "Invalid date of birth format. Use DD-MM-YYYY.")
         return
     try:
         conn = sqlite3.connect("Hospital.db")
@@ -140,111 +140,115 @@ def check_in_patient():
     except sqlite3.Error as e:
         messagebox.showerror("Error", f"Error occurred: {str(e)}")
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~SEARCH PATIENT~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~~~~~~~~~~~SEARCH PATIENT~~~~~~~~~~~
 def search_patient():
     search_name = search_name_entry.get()
-    global result_label 
+    if not search_name:
+        messagebox.showerror("Error", "Please Enter Patient Name to Search.")
+    else:
+        global result_label 
+        try:
+            conn = sqlite3.connect("Hospital.db")
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM patients WHERE name LIKE ?", ('%' + search_name + '%',))
+            results = cursor.fetchall()
+            conn.close()
 
-    try:
-        conn = sqlite3.connect("Hospital.db")
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM patients WHERE name LIKE ?", ('%' + search_name + '%',))
-        results = cursor.fetchall()
-        conn.close()
+            for widget in search_results_frame.winfo_children():
+                widget.destroy()
 
-        for widget in search_results_frame.winfo_children():
-            widget.destroy()
-
-        if results :
+            if results :
+                for index, result in enumerate(results):
+                    patient_id, name, age, gender, address, phone_no, blood_group, room_type,disease,doctor_visits,check_in_date, dob = result
+                    patient_info = (f"Patient ID3: {patient_id}\n"
+                                    f"Patient Name: {name}\n"
+                                    f"Age: {age}\n"
+                                    f"Gender: {gender}\n"
+                                    f"Address: {address}\n"
+                                    f"Phone No: {phone_no}\n"
+                                    f"Blood Group: {blood_group}\n"
+                                    f"Room Type: {room_type}\n"
+                                    f"Disease: {disease}\n"
+                                    f"Doctor Visits: {doctor_visits}\n"
+                                    f"Check-in Date: {check_in_date}\n"
+                                    f"Date of Birth: {dob}\n"
+                                    )
+                    result_label = tk.Label(search_results_frame, text=patient_info, anchor='w',justify='left', bg='lightblue')
+                    result_label.pack(fill='both', expand=True, padx=10, pady=5)
             
-            for index, result in enumerate(results):
-                patient_id, name, age, gender, address, phone_no, blood_group, room_type,disease,doctor_visits,check_in_date, dob = result
-                patient_info = (f"Patient ID3: {patient_id}\n"
-                                f"Patient Name: {name}\n"
-                                f"Age: {age}\n"
-                                f"Gender: {gender}\n"
-                                f"Address: {address}\n"
-                                f"Phone No: {phone_no}\n"
-                                f"Blood Group: {blood_group}\n"
-                                f"Room Type: {room_type}\n"
-                                f"Disease: {disease}\n"
-                                f"Doctor Visits: {doctor_visits}\n"
-                                f"Check-in Date: {check_in_date}\n"
-                                f"Date of Birth: {dob}\n"
-                                )
-                result_label = tk.Label(search_results_frame, text=patient_info, anchor='w',justify='left', bg='lightblue')
-                result_label.pack(fill='both', expand=True, padx=10, pady=5)
-        
-        else:
-            messagebox.showerror("Error", "Patient not found.")
-        
-    except sqlite3.Error as e:
-        messagebox.showerror("Error", f"Error occurred: {str(e)}")
+            else:
+                messagebox.showerror("Error", "Patient not found.")
+            
+        except sqlite3.Error as e:
+            messagebox.showerror("Error", f"Error occurred: {str(e)}")
 
     clear_entries()
 # Global declaration of variable
 current_bill_message = ""
 msg = "----------------------------------------"
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~BILL CALCULATION~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~~~~~~~~~~~BILL CALCULATION~~~~~~~~~~~
 def calculate_bill():
-    global current_bill_message
-    global bill_frame 
+    search_name = billing_patient_name_entry.get()
+    if not search_name:
+        messagebox.showerror("Error", "Please Enter Patient Name to Calculate Bill.")
+    else:
+        global current_bill_message
+        global bill_frame 
 
-    search_name = billing_patient_name_entry.get()  
-    try:
-        conn = sqlite3.connect("Hospital.db")
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM patients WHERE name LIKE ?", ('%' + search_name + '%',))
-        patient = cursor.fetchone()
-        conn.close()
+        try:
+            conn = sqlite3.connect("Hospital.db")
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM patients WHERE name LIKE ?", ('%' + search_name + '%',))
+            patient = cursor.fetchone()
+            conn.close()
 
-        if patient:
-            room_type1 = patient[7]
-            doctor_visits = patient[9]
+            if patient:
+                room_type1 = patient[7]
+                doctor_visits = patient[9]
 
-            room_rent = {'Single': 1000, 'Twin Sharing': 750, 'Dormitory': 500, 'ICU': 2000}
-            rent = room_rent.get(room_type1, 0)
-            doctor_charge = {'Single': 400, 'Twin Sharing': 300, 'Dormitory': 200, 'ICU': 450}
-            charge = doctor_charge.get(room_type1, 0)
-            doctor_charges = doctor_visits * charge
-            total_bill = rent + doctor_charges
+                room_rent = {'Single': 1000, 'Twin Sharing': 750, 'Dormitory': 500, 'ICU': 2000}
+                rent = room_rent.get(room_type1, 0)
+                doctor_charge = {'Single': 400, 'Twin Sharing': 300, 'Dormitory': 200, 'ICU': 450}
+                charge = doctor_charge.get(room_type1, 0)
+                doctor_charges = doctor_visits * charge
+                total_bill = rent + doctor_charges
 
-            bill_message = (
-                f"\tPatient ID:  {patient[0]}\n"
-                f"\tName:  {patient[1]}\n"
-                f"\tAge:  {patient[2]}\n"
-                f"\tGender:  {patient[3]}\n"
-                f"\tAddress:  {patient[4]}\n"
-                f"\tPhone:  {patient[5]}\n"
-                f"\tBlood Group:  {patient[6]}\n"
-                f"\tRoom Type:  {room_type}\n"
-                f"\tDisease:  {patient[8]}\n"
-                f"\tDoctor Visits:  {doctor_visits}\n"
-                f"\tDate of Admission:  {patient[10]}\n"
-                f"\tDate of Birth:  {patient[11]}\n"
-                f"\tRoom Rent:  {rent}\n"
-                f"\tDoctor Charges:  {doctor_charges}\n\n"   
-            )
-            
-            bill_frame = tk.Frame(billing_frame,bd=5, relief=tk.RIDGE, bg="#aad7f3")
-            bill_frame.place(x=320,y=110,width=460, height=400)
-            
-            msg = (f"\tTotal Bill:  {total_bill}\n")
-            
-            tk.Label(bill_frame, text=bill_message,font="arial 15",bg="#aad7f3", justify='left', anchor='w').place(x=0,y=0)
-            tk.Label(bill_frame, text=msg,font="arial 15", justify='center',bg="#aad7f3", anchor='w').place(x=50,y=335)
+                bill_message = (
+                    f"\tPatient ID:  {patient[0]}\n"
+                    f"\tName:  {patient[1]}\n"
+                    f"\tAge:  {patient[2]}\n"
+                    f"\tGender:  {patient[3]}\n"
+                    f"\tAddress:  {patient[4]}\n"
+                    f"\tPhone:  {patient[5]}\n"
+                    f"\tBlood Group:  {patient[6]}\n"
+                    f"\tRoom Type:  {room_type}\n"
+                    f"\tDisease:  {patient[8]}\n"
+                    f"\tDoctor Visits:  {doctor_visits}\n"
+                    f"\tDate of Admission:  {patient[10]}\n"
+                    f"\tDate of Birth:  {patient[11]}\n"
+                    f"\tRoom Rent:  {rent}\n"
+                    f"\tDoctor Charges:  {doctor_charges}\n\n"   
+                )
+                
+                bill_frame = tk.Frame(billing_frame,bd=5, relief=tk.RIDGE, bg="#aad7f3")
+                bill_frame.place(x=320,y=110,width=460, height=400)
+                
+                msg = (f"\tTotal Bill:  {total_bill}\n")
+                
+                tk.Label(bill_frame, text=bill_message,font="arial 15",bg="#aad7f3", justify='left', anchor='w').place(x=0,y=0)
+                tk.Label(bill_frame, text=msg,font="arial 15", justify='center',bg="#aad7f3", anchor='w').place(x=50,y=335)
 
-            current_bill_message = "-----------------BILL------------------\n" + bill_message+"\n"+ msg
-        else:
-            messagebox.showerror("Error", "Patient not found.")
-    
-    except sqlite3.Error as e:
-        messagebox.showerror("Error", f"Error occurred: {str(e)}")
+                current_bill_message = "-----------------BILL------------------\n" + bill_message+"\n"+ msg
+            else:
+                messagebox.showerror("Error", "Patient not found.")
+        
+        except sqlite3.Error as e:
+            messagebox.showerror("Error", f"Error occurred: {str(e)}")
     
     clear_entries()   
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~PRINTING BILL~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~~~~~~~~~~~PRINTING BILL~~~~~~~~~~~
 def print_bill():
     global current_bill_message
     global msg  
@@ -266,7 +270,7 @@ def print_bill():
         messagebox.showerror("Error", f"Error occurred while saving the bill: {str(e)}")
 
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~FETCHING DATA~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~~~~~~~~~~~FETCHING DATA~~~~~~~~~~~
 def fetch_data():
     try:
         conn = sqlite3.connect("Hospital.db")
@@ -285,7 +289,7 @@ def fetch_data():
 initialize_db()
 
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~GUI~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~~~~~~~~~~~GUI~~~~~~~~~~~
 # Create the main window
 top = tk.Tk()
 top.title("Hospital Management System")
@@ -309,28 +313,28 @@ image = tk.PhotoImage(file=image_path)
 title = tk.Label(top,text="Hospital Management System", font="arial 20 bold", bg="#0047b3", fg="white", image=image, compound=tk.LEFT, padx=10)
 title.grid(row=0, column=0, sticky='ew')
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~BUTTON FRAME~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~~~~~~~~~~~BUTTON FRAME~~~~~~~~~~~
 # Create a frame for buttons
 btn_frame = tk.Frame(top,bd=5, relief=tk.RIDGE, bg="#7fc7d9")
 btn_frame.place(x=0, y=54, width=250, height=740)
 
 # Create navigation buttons
 #Home Button
-tk.Button(btn_frame,bd=4, text="HOME", font="arial 15", bg="#365486", fg="white", cursor="hand2", command=lambda: [show_frame(home_frame),result_label.destroy(),bill_frame.destroy(),clear_entries()
+tk.Button(btn_frame,bd=4, text="HOME", font="arial 15", bg="#365486", fg="white", cursor="hand2", command=lambda: [show_frame(home_frame),result_label.destroy(),bill_frame.destroy()
 ]).place(x=30, y=65, width=190, height=70)
 
 #Bed Status Button
-tk.Button(btn_frame,bd=4,  text="Bed Status", font="arial 15", bg="#365486", fg="white", cursor="hand2", command=lambda: [show_frame(bed_status_frame),update_bed_status_and_database(room_type,+0),result_label.destroy(),bill_frame.destroy(),clear_entries()]).place(x=30, y=205, width=190, height=70)
+tk.Button(btn_frame,bd=4,  text="Bed Status", font="arial 15", bg="#365486", fg="white", cursor="hand2", command=lambda: [show_frame(bed_status_frame),update_bed_status_and_database(room_type,+0),result_label.destroy(),bill_frame.destroy()]).place(x=30, y=205, width=190, height=70)
 
 #Patient Data Button
-tk.Button(btn_frame,bd=4,  text="Patient Data", font="arial 15", bg="#365486", fg="white", cursor="hand2", command=lambda: [show_frame(patient_data_frame),result_label.destroy(),bill_frame.destroy(),clear_entries()]).place(x=30, y=345, width=190, height=70)
+tk.Button(btn_frame,bd=4,  text="Patient Data", font="arial 15", bg="#365486", fg="white", cursor="hand2", command=lambda: [show_frame(patient_data_frame),result_label.destroy(),bill_frame.destroy()]).place(x=30, y=345, width=190, height=70)
 
 #Billing Button
-tk.Button(btn_frame, bd=4, text="Billing", font="arial 15", bg="#365486", fg="white", cursor="hand2", command=lambda: [show_frame(billing_frame),result_label.destroy(),bill_frame.destroy(),clear_entries()]).place(x=30, y=485, width=190, height=70)
+tk.Button(btn_frame, bd=4, text="Billing", font="arial 15", bg="#365486", fg="white", cursor="hand2", command=lambda: [show_frame(billing_frame),result_label.destroy(),bill_frame.destroy()]).place(x=30, y=485, width=190, height=70)
 
 
 # Create frames for each section
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~HOME FRAME~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~~~~~~~~~~~HOME FRAME~~~~~~~~~~~
 
 home_frame = tk.Frame(top, relief=tk.RIDGE,bd=5, bg="#aad7f3")
 home_frame.place(x=300, y=80, width=1200, height=680)
@@ -355,7 +359,7 @@ radio = tk.Label(home_frame, text="Gender:", bg="#aad7f3", font="10").place(x=80
 gender_var = tk.StringVar(value="none")
 tk.Radiobutton(home_frame, text="Male",bg="#aad7f3",variable=gender_var, value="Male").place(x=250, y=220)
 tk.Radiobutton(home_frame, text="Female",bg="#aad7f3",variable=gender_var, value="Female").place(x=320, y=220)
-tk.Radiobutton(home_frame, text="Others",bg="#aad7f3", variable=gender_var, value="Other").place(x=400, y=220)
+tk.Radiobutton(home_frame, text="Others",bg="#aad7f3", variable=gender_var, value="Others").place(x=400, y=220)
 
 tk.Label(home_frame, text="Address:", bg="#aad7f3", font="10").place(x=80, y=270)
 address_entry = ttk.Entry(home_frame, width=30,font="arial 12")
@@ -397,7 +401,7 @@ s.configure('my.TButton', font=('arial', 12))
 # Admit Button
 ttk.Button(home_frame,style='my.TButton', text="Admit", command=lambda: [check_in_patient(), fetch_data()]).place(x=500, y=415, width=100, height=40)
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~BED STATUS FRAME~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~~~~~~~~~~~BED STATUS FRAME~~~~~~~~~~~
 
 conn = sqlite3.connect('Hospital.db')
 cursor = conn.cursor()
@@ -466,7 +470,7 @@ tk.Label(bed_status_frame, text="Bed Occupancy Status", font="arial 15 bold", bg
 
 room_types = ['Single', 'Twin Sharing', 'Dormitory', 'ICU']
 colors = ['lightgreen', 'lightgrey']  # Lightgreen for available bed, pink for ocuppied bed
-image_path1 = r"C:\Users\HP\OneDrive\Desktop\Python\bed.png" 
+image_path1 = r"C:\Users\HP\OneDrive\Desktop\Python\bed.png"
 image1 = Image.open(image_path1)
 image1 = image1.resize((50, 50))
 photo = ImageTk.PhotoImage(image1)
@@ -495,7 +499,7 @@ for i, room_type in enumerate(room_types):
                 bed_labels[room_type].append(bed_label)
 
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~PATIENT DATA FRAME~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~~~~~~~~~~~PATIENT DATA FRAME~~~~~~~~~~~
 
 patient_data_frame = tk.Frame(top,bd=5, relief=tk.RIDGE, bg="#aad7f3")
 patient_data_frame.place(x=300, y=80, width=1200, height=680)
@@ -515,23 +519,18 @@ search_results_frame.place(x=260, y=135, width=600, height=200)
 result_label = tk.Label(search_results_frame, text="", anchor='w',justify='left', bg='lightblue')
 
 
-#~~~~~~~~~~~~~~~~~~~~~~~PATIENT TABLE FRAME~~~~~~~~~~~~~~~~~~~~~~~~~
+#~~~~~~~~PATIENT TABLE FRAME~~~~~~~~
 pt_table_frame = Frame(patient_data_frame, bd= 2, relief=RIDGE)
 pt_table_frame.place(x=5, y= 360, width =1180, height=300)
 
-#~~~~~~~~~~~~~~SCROLL BAR~~~~~~~~~~~~
-# scrollX = ttk.Scrollbar(pt_table_frame, orient=HORIZONTAL)
-# scrollX.pack(side='bottom', fill='x')
-
+#~~~~~SCROLL BAR~~~~~
 scrollY = ttk.Scrollbar(pt_table_frame, orient=VERTICAL)
 scrollY.pack(side='right', fill='y')
 
-#~~~~~~~~~~~~TABLE CREATION~~~~~~~~~~~
+#~~~~~TABLE CREATION~~~~
 
 table = ttk.Treeview(pt_table_frame, columns=("pid","na", "age", "gen","ad","phno","bdg","rmt","dis","dv","cdate","dob",),xscrollcommand=scrollY.set, yscrollcommand=scrollY.set)
-scrollX = ttk.Scrollbar(command=table.xview)
-scrollY = ttk.Scrollbar(command=table.yview)
-
+scrollY.config(command=table.yview)
 #heading for frame
 table.heading("pid", text="Patient ID")
 table.heading("na", text="Name")
@@ -562,7 +561,7 @@ table.column("cdate", width=100)
 table.column("dob", width=100)
 fetch_data()
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~BILLING FRAME~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~~~~~~~~~~~BILLING FRAME~~~~~~~~~~~
 
 billing_frame = tk.Frame(top,bd=5, relief=tk.RIDGE, bg="#aad7f3")
 billing_frame.place(x=300, y=80, width=1200, height=680)
