@@ -295,7 +295,7 @@ top = tk.Tk()
 top.title("Hospital Management System")
 
 # Set the window icon
-path = r"C:\Users\HP\OneDrive\Desktop\Python\logo.ico"
+path = r"logo.ico"
 top.iconbitmap(path)
 
 # Set the window size and state
@@ -308,7 +308,7 @@ top.config(bg="#dcf2f1")
 top.grid_columnconfigure(0, weight=1)
 
 # Load and set the image for the title label
-image_path = r"C:\Users\HP\OneDrive\Desktop\Python\icon.png"
+image_path = r"icon.png"
 image = tk.PhotoImage(file=image_path)
 title = tk.Label(top,text="Hospital Management System", font="arial 20 bold", bg="#0047b3", fg="white", image=image, compound=tk.LEFT, padx=10)
 title.grid(row=0, column=0, sticky='ew')
@@ -470,7 +470,7 @@ tk.Label(bed_status_frame, text="Bed Occupancy Status", font="arial 15 bold", bg
 
 room_types = ['Single', 'Twin Sharing', 'Dormitory', 'ICU']
 colors = ['lightgreen', 'lightgrey']  # Lightgreen for available bed, pink for ocuppied bed
-image_path1 = r"C:\Users\HP\OneDrive\Desktop\Python\bed.png"
+image_path1 = r"bed.png"
 image1 = Image.open(image_path1)
 image1 = image1.resize((50, 50))
 photo = ImageTk.PhotoImage(image1)
