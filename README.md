@@ -39,6 +39,3 @@ Navigate through different sections using the sidebar buttons:
 ## Contributors
 - Chaitanya Thombare (https://github.com/ChaituThombare)
 - Ayush Nimbhorkar (https://github.com/Ayush-Nimbhorkar)
-
-## License
-This project is licensed under the [MIT License](LICENSE).
